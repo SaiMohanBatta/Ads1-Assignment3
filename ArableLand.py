@@ -8,42 +8,44 @@ from sklearn import cluster
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import RobustScaler
 
-
-def read_file(file_path):
+# Function to fetch data from a CSV file
+def FetchData(CSV_Name):
     """
     Reads a CSV file and returns a DataFrame.
 
     Parameters:
-    file_path (str): The path to the CSV file to be read.
+    CSV_Name (str): The path to the CSV file to be read.
 
     Returns:
     DataFrame: A DataFrame containing the data read from the CSV file.
     """
-    data = pd.read_csv(file_path)
-    return data
+    df = pd.read_csv(CSV_Name)
+    return df
 
 
-def calculate_silhouette(xy, n_clusters):
+# Function to calculate silhouette score for clustering evaluation
+def SilhouetteScore(xy, n_clusters):
     """
-    Calculates the silhouette score for a given number of clusters in a dataset.
+    Calculates the silhouette score for a given number of clusters.
 
     Parameters:
     xy (array): The data for clustering.
     n_clusters (int): The number of clusters to form.
 
     Returns:
-    float: The silhouette score
+    S_Score(float): The silhouette score
     """
     kmeans = cluster.KMeans(n_clusters=n_clusters, n_init=20)
     kmeans.fit(xy)
     labels = kmeans.labels_
-    score = silhouette_score(xy, labels)
-    return score
+    S_Score = silhouette_score(xy, labels)
+    return S_Score
 
 
-def polynomial(x, a, b, c, d):
+# Function for a polynomial fit
+def poly_fit(x, a, b, c, d):
     """
-    Polynomial model function for calculating the value of a polynomial at x.
+    Function for calculating the value of a polynomial at x.
 
     Parameters:
     x (number or array): The value(s) at which the polynomial is evaluated.
@@ -55,202 +57,204 @@ def polynomial(x, a, b, c, d):
     return a * x**3 + b * x**2 + c * x + d
 
 
-def calculate_error(x, func, params, covariance):
+# Function to calculate error range for a given function and parameters
+def err_range(x, f, param, cov):
     """
-    Calculates error propagation for a given function and its parameters.
+    Calculates error for a given function and its parameters.
 
     Parameters:
     x (number or array): The input value(s) at which the error is evaluated.
-    func (function): The function for which the error is calculated.
-    params (list or array): Parameters of the function.
-    covariance (array): The covariance matrix of the parameters.
+    f (function): The function for which the error is calculated.
+    param (list or array): Parameters of the function.
+    cov (array): The covariance matrix of the parameters.
 
     Returns:
     numpy.ndarray: The calculated error values corresponding to each x.
     """
     var = np.zeros_like(x)
-    for i in range(len(params)):
-        deriv1 = calculate_derivative(x, func, params, i)
-        for j in range(len(params)):
-            deriv2 = calculate_derivative(x, func, params, j)
-            var += deriv1 * deriv2 * covariance[i, j]
+    for i in range(len(param)):
+        deriv1 = deriv(x, f, param, i)
+        for j in range(len(param)):
+            deriv2 = deriv(x, f, param, j)
+            var += deriv1 * deriv2 * cov[i, j]
     return np.sqrt(var)
 
 
-def calculate_derivative(x, func, params, index):
+# Function to calculate the derivative of a function
+def deriv(x, f, param, idx):
     """
     Calculates the derivative of a function wrt to one of its parameters.
 
     Parameters:
     x (number or array): The value(s) at which the derivative is calculated.
-    func (function): The function for which the derivative is calculated.
-    params (list or array): Parameters of the function.
-    index (int): The index of the parameter wrt to which the deriv is calculated.
+    f (function): The function for which the derivative is calculated.
+    param (list or array): Parameters of the function.
+    idx (int): The index of the parameter
 
     Returns:
-    numpy.ndarray or number: The deriv of the function wrt to the parameter.
+    numpy.ndarray or number: The deriv of the function 
     """
-    scale = 1e-6
-    delta = np.zeros_like(params)
-    delta[index] = scale * abs(params[index])
-    up_lim = params + delta
-    low_lim = params - delta
-    diff = 0.5 * (func(x, *up_lim) - func(x, *low_lim))
-    return diff / (scale * abs(params[index]))
+    val = 1e-6
+    delta = np.zeros_like(param)
+    delta[idx] = val * abs(param[idx])
+    up_range = param + delta
+    low_range = param - delta
+    diff = 0.5 * (f(x, *up_range) - f(x, *low_range))
+    return diff / (val * abs(param[idx]))
 
 
-# Read and analyze the data
-inf_data = read_file("ArableLand.csv")
-if inf_data is not None:
-    print(inf_data.describe())
+# Fetch the data and transform as required
+df_land = FetchData("ArableLand.csv")
+if df_land is not None:
+    print(df_land.describe())
 
-inf_data = inf_data[(inf_data["1960"].notna()) & 
-                                 (inf_data["2020"].notna())]
-inf_data.reset_index(drop=True, inplace=True)
+# Avoiding NaN values
+df_land = df_land[(df_land["1960"].notna()) & (df_land["2020"].notna())]
+df_land.reset_index(drop=True, inplace=True)
 
-growth = inf_data[["Country Name", "1960"]].copy()
-growth["Growth"] = 100.0 / 20.0 * (inf_data["2020"] - 
-                    inf_data["1960"]) / inf_data["1960"]
+# Creating a DataFrame for the change in arable land
+Incr = df_land[["Country Name", "1960"]].copy()
+Incr["Change"] = 100.0 / 60.0 * (df_land["2020"] - 
+                                 df_land["1960"]) / df_land["1960"]
 warnings.filterwarnings("ignore", category=UserWarning)
 
-print(growth.describe())
+# Displaying summary statistics for the change in arable land
+print(Incr.describe())
 print()
-print(growth.dtypes)
+print(Incr.dtypes)
 
-#scatter plot for original data
+# Scatter plot for original data
 plt.figure(figsize=(8, 8))
-plt.scatter(growth["1960"], growth["Growth"])
-plt.xlabel("Arable land(hect per person),1960")
-plt.ylabel("Growth/year in %")
+plt.scatter(Incr["1960"], Incr["Change"])
+plt.xlabel("Arable land (hect per person), 1960")
+plt.ylabel("Change per year in %")
 plt.show()
 
-# normalization of data
+# Normalization of data
 scaler = RobustScaler()
-df_clust = growth[["1960", "Growth"]]
+df_clust = Incr[["1960", "Change"]]
 scaler.fit(df_clust)
-norm_data = scaler.transform(df_clust)
+df_norm = scaler.transform(df_clust)
 
-# scatter plot for normalized data
+# Scatter plot for normalized data
 plt.figure(figsize=(8, 8))
-plt.scatter(norm_data[:, 0], norm_data[:, 1])
-plt.xlabel("Normalized Arable land(hect per person),1960")
-plt.ylabel("Normalized Growth per year [%]")
+plt.scatter(df_norm[:, 0], df_norm[:, 1])
+plt.xlabel("Normalized Arable land (hect per person), 1960")
+plt.ylabel("Normalized Change per year [%]")
 plt.show()
 
-# Fetching silhoutte score
+# Fetching silhouette score
 for cluster_count in range(2, 11):
-    score = calculate_silhouette(norm_data, cluster_count)
-    score_message = f"The silhouette score for {cluster_count:3d} clusters is"
-    print(f"{score_message} {score:7.4f}")
-
+    Scr = SilhouetteScore(df_norm, cluster_count)
+    S_message = f"The silhouette score for {cluster_count:3d} clusters is"
+    print(f"{S_message} {Scr:7.4f}")
 
 # Clustering with KMeans
 kmeans = cluster.KMeans(n_clusters=3, n_init=20)
-kmeans.fit(norm_data)
+kmeans.fit(df_norm)
 labels = kmeans.labels_
 centers = kmeans.cluster_centers_
 cen = scaler.inverse_transform(centers)
 
 # Initial Scatter Plot with clusters
 plt.figure(figsize=(8, 8))
-scatter = plt.scatter(growth["1960"], growth["Growth"], c=labels, 
-                      s=10, marker="o", cmap=cm.rainbow, label='Data Points')
-cen_scatter = plt.scatter(cen[:, 0], cen[:, 1],
-                              s=45, c="k", marker="d", label='Cluster Centers')
-plt.xlabel("Arable land(hect per person),1960")
-plt.ylabel("Growth/year in %")
-
+sctr = plt.scatter(Incr["1960"], Incr["Change"], c=labels,
+                   s=10, marker="o", cmap=cm.rainbow, label='Data Points')
+cen_sctr = plt.scatter(cen[:, 0], cen[:, 1],
+                       s=45, c="k", marker="d", label='Cluster Centers')
+plt.xlabel("Arable land (hect per person), 1960")
+plt.ylabel("Change per year in %")
 
 # Adding legend
-plt.legend(handles=[scatter, cen_scatter], loc='upper right')
+plt.legend(handles=[sctr, cen_sctr], loc='upper right')
 plt.show()
 
 print(cen)
 
 # Fetching subset of original data
-growth_2 = growth[labels == 0].copy()
-print(growth_2.describe())
-#Normalising the data
-df_clust2 = growth_2[["1960", "Growth"]]
+Incr_2 = Incr[labels == 0].copy()
+print(Incr_2.describe())
+
+# Normalizing the data within the subset
+df_clust2 = Incr_2[["1960", "Change"]]
 scaler.fit(df_clust2)
 norm_dt2 = scaler.transform(df_clust2)
 
 plt.figure(figsize=(8, 8))
 plt.scatter(norm_dt2[:, 0], norm_dt2[:, 1])
-plt.xlabel("Arable land(hect per person),1960")
-plt.ylabel("Growth/year in %")
+plt.xlabel("Arable land (hect per person), 1960")
+plt.ylabel("Change per year in %")
 plt.show()
 
-# clustering within subset
-kmeans_subset = cluster.KMeans(n_clusters=3, n_init=20)
-kmeans_subset.fit(norm_dt2)
-subset_labels = kmeans_subset.labels_
-subset_centers = kmeans_subset.cluster_centers_
+# Clustering within the subset
+k_subset = cluster.KMeans(n_clusters=3, n_init=20)
+k_subset.fit(norm_dt2)
+Labels_SS = k_subset.labels_
+subset_cen = k_subset.cluster_centers_
 
-#Backscaling the cluster centers
-SS_cen = scaler.inverse_transform(subset_centers)
+# Backscaling the cluster centers
+cen_SS = scaler.inverse_transform(subset_cen)
 
 # Second Scatter Plot (Within Subset):
 plt.figure(figsize=(8.0, 8.0))
-scatter_SS = plt.scatter(growth_2["1960"], growth_2["Growth"], 
-                             c=subset_labels, s=10, marker="o", 
-                             cmap=cm.rainbow,
-                             label='Data Points')
-SS_cen = plt.scatter(SS_cen[:, 0], 
-                                     SS_cen[:, 1],
-                                     s=45, c="k", marker="d", 
-                                     label='Cluster Centers')
-plt.xlabel("Arable land(hect per person),1960")
-plt.ylabel("Growth/year in %")
+sctr_SS = plt.scatter(Incr_2["1960"], Incr_2["Change"],
+                      c=Labels_SS, s=10, marker="o",
+                      cmap=cm.rainbow,
+                      label='Data Points')
+Sctr_cen_SS = plt.scatter(cen_SS[:, 0],
+                          cen_SS[:, 1],
+                          s=45, c="k", marker="d",
+                          label='Cluster Centers')
+plt.xlabel("Arable land (hect per person), 1960")
+plt.ylabel("Change per year in %")
 # Add legend
-plt.legend(handles=[scatter_SS, SS_cen], loc='upper right')
+plt.legend(handles=[sctr_SS, Sctr_cen_SS], loc='upper right')
 plt.show()
 
-
-# Load and transpose UK inflation data
-uk_inflation_data = read_file('EuropeLand.csv')
-uk_inf_data_trsp = uk_inflation_data.T
+# Code for Fitting Europe Arable land Data
+# Load and transpose Europe land data
+EU_Land_dt = FetchData('EuropeLand.csv')
+EU_Land_dt_T = EU_Land_dt.T
 
 # Cleaning the transposed data
-uk_inf_data_trsp.columns = ['Land']
-uk_inf_data_trsp = uk_inf_data_trsp.drop('Year')
-uk_inf_data_trsp.reset_index(inplace=True)
-uk_inf_data_trsp.rename(columns={'index': 'Year'}, inplace=True)
-uk_inf_data_trsp['Year'] = uk_inf_data_trsp['Year'].astype(int)
-uk_inf_data_trsp['Land'] = uk_inf_data_trsp['Land'].astype(float)
+EU_Land_dt_T.columns = ['Land']
+EU_Land_dt_T = EU_Land_dt_T.drop('Year')
+EU_Land_dt_T.reset_index(inplace=True)
+EU_Land_dt_T.rename(columns={'index': 'Year'}, inplace=True)
+EU_Land_dt_T['Year'] = EU_Land_dt_T['Year'].astype(int)
+EU_Land_dt_T['Land'] = EU_Land_dt_T['Land'].astype(float)
 
-# getting x and y values for modeling
-x = uk_inf_data_trsp['Year'].values.astype(float)
-y = uk_inf_data_trsp['Land'].values.astype(float)
+# Appending to x and y values for modeling
+x_val = EU_Land_dt_T['Year'].values.astype(float)
+y_val = EU_Land_dt_T['Land'].values.astype(float)
 
 # Fitting the polynomial model to the data
-popt, pcov = curve_fit(polynomial, x, y)
+popt, pcov = curve_fit(poly_fit, x_val, y_val)
 
 # Calculate error ranges for original data
-y_e = calculate_error(x, polynomial, popt, pcov)
+y_err = err_range(x_val, poly_fit, popt, pcov)
 
-# predict for future years and predict values
-x_f = np.arange(max(x) + 1, 2031)
-y_f = polynomial(x_f, *popt)
+# Predict for future years and predict values
+fut_x = np.arange(max(x_val) + 1, 2041)
+fut_y = poly_fit(fut_x, *popt)
 
-# Calculate error ranges for future predictions
-y_f_e = calculate_error(x_f, polynomial, popt, pcov)
+# Calculate error ranges for predictions
+y_fut_err = err_range(fut_x, poly_fit, popt, pcov)
 
 # Plotting the fitting data and predicted data
 plt.figure(figsize=(10, 6))
-plt.plot(x, y, 'b-', label='Historical Data')
-plt.plot(x, polynomial(x, *popt), 'r-', 
-         label='Fitted Polynomial Model')
-plt.fill_between(x, polynomial(x, *popt) - 
-    y_e, polynomial(x, *popt) + y_e, color='orange', 
-    alpha=0.5, label='Confidence Interval for Historical Data')
-plt.plot(x_f, y_f, 'g--', label='Future Predictions')
-plt.fill_between(x_f, y_f - y_f_e, y_f +
-                 y_f_e, color='lightgreen', 
-                 alpha=0.5, label='Confidence Interval for Future Predictions')
-plt.title('Fitting and forcasting for Europe Data')
+plt.plot(x_val, y_val, 'p-', label='Original Data')
+plt.plot(x_val, poly_fit(x_val, *popt), 'g-',
+         label='Fitted Model')
+plt.fill_between(x_val, poly_fit(x_val, *popt) -
+                 y_err, poly_fit(x_val, *popt) + y_err, color='lightgreen',
+                 alpha=0.5, label='CI for Original Data')
+plt.plot(fut_x, fut_y, 'r--', label='Predictions')
+plt.fill_between(fut_x, fut_y - y_fut_err, fut_y +
+                 y_fut_err, color='Orange',
+                 alpha=0.5, label='CI for  Predictions')
+plt.title('Fitting and forecasting for Europe Data')
 plt.xlabel('Year')
-plt.ylabel('Arable land[Hect per person]')
+plt.ylabel('Arable land [Hect per person]')
 plt.legend()
 plt.show()
-
